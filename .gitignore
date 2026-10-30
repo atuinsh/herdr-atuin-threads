@@ -1,0 +1,6 @@
+# Written by the Herdr app into every mod folder.
+mods/*/gpui-kit.d.ts
+mods/*/jsconfig.json
+# A per-machine override of the atuin binary.
+mods/*/local.json
+.DS_Store
