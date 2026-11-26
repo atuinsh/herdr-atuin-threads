@@ -38,7 +38,7 @@ async function isDir(path) {
   if ((await exec("test", ["-d", path]).catch(() => ({ code: -1 }))).code === 0) return true;
   // No `test` program, so ask cmd. The trailing `\*` asks about a folder, so junctions count
   // and a plain file does not.
-  return (await exec("cmd", ["/c", "if", "exist", `"${path}\*"`, "(exit 0)", "(exit 1)"])
+  return (await exec("cmd", ["/c", "if", "exist", `"${path}\*"`, "(exit 0)", "else", "(exit 1)"])
     .catch(() => ({ code: -1 }))).code === 0;
 }
 
