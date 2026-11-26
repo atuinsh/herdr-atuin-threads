@@ -30,6 +30,18 @@ const inside = (dir, root) => dir === root || dir.startsWith(`${root}/`);
 // One line of text: titles and previews may hold newlines and control characters.
 const line = (s) => (s ?? "").replace(/[\u0000-\u001f\u007f]+/g, " ").trim();
 
+// Whether the OS sees `path` as a folder. The app's fs API refuses a path that leaves the home
+// folder through a reparse point (a symlinked or junctioned folder), and on Windows `test` is a
+// shell builtin rather than a program, so ask the OS instead of the fs API.
+async function isDir(path) {
+  if (!path) return false;
+  if ((await exec("test", ["-d", path]).catch(() => ({ code: -1 }))).code === 0) return true;
+  // No `test` program, so ask cmd. The trailing `\*` asks about a folder, so junctions count
+  // and a plain file does not.
+  return (await exec("cmd", ["/c", "if", "exist", `"${path}\*"`, "(exit 0)", "else", "(exit 1)"])
+    .catch(() => ({ code: -1 }))).code === 0;
+}
+
 function ago(iso) {
   const ms = Date.now() - Date.parse(iso);
   const m = Math.floor(ms / 60000);
@@ -117,7 +129,7 @@ export default class Threads extends View {
     if (fork) args.push("--fork");
     const name = line(th.title).slice(0, 28) || undefined;
     cx.spawn(async () => {
-      const has = th.cwd ? (await exec("test", ["-d", th.cwd])).code === 0 : false;
+      const has = await isDir(th.cwd);
       run("tab.new", { space: space?.id, name, folder: has ? th.cwd : undefined, argv: [this.atuin, ...args] });
     });
   }
