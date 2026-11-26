@@ -32,11 +32,14 @@ const line = (s) => (s ?? "").replace(/[\u0000-\u001f\u007f]+/g, " ").trim();
 
 // Whether the OS sees `path` as a folder. The app's fs API refuses a path that leaves the home
 // folder through a reparse point (a symlinked or junctioned folder), and on Windows `test` is a
-// shell builtin rather than a program, so ask the shell instead of the fs API.
+// shell builtin rather than a program, so ask the OS instead of the fs API.
 async function isDir(path) {
   if (!path) return false;
-  if ((await exec("test", ["-d", path])).code === 0) return true;
-  return (await exec("cmd", ["/c", "if", "exist", `"${path}"`, "(exit 0)", "(exit 1)"]).catch(() => ({ code: -1 }))).code === 0;
+  if ((await exec("test", ["-d", path]).catch(() => ({ code: -1 }))).code === 0) return true;
+  // No `test` program, so ask cmd. The trailing `\*` asks about a folder, so junctions count
+  // and a plain file does not.
+  return (await exec("cmd", ["/c", "if", "exist", `"${path}\*"`, "(exit 0)", "(exit 1)"])
+    .catch(() => ({ code: -1 }))).code === 0;
 }
 
 function ago(iso) {
